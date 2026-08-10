@@ -166,6 +166,7 @@ staticfn void swift_putmsghistory(const char *, boolean);
 staticfn void swift_status_init(void);
 staticfn void swift_status_update(int, genericptr_t, int, int, int,
 								  unsigned long *);
+staticfn void swift_fill_inven_slot(nhswift_inven_slot *, NHEquipSlot, struct obj *);
 staticfn void swift_update_inventory(int);
 staticfn win_request_info *swift_ctrl_nhwindow(winid, int,
 											   win_request_info *);
@@ -547,10 +548,45 @@ swift_preference_update(const char *pref)
 }
 
 staticfn void
+swift_fill_inven_slot(nhswift_inven_slot *out, NHEquipSlot id, struct obj *obj)
+{
+	(void) memset((genericptr_t) out, 0, sizeof *out);
+	out->slot = id;
+	if (obj) {
+		glyph_info gi;
+		int glyph = obj_to_glyph(obj, rn2_on_display_rng);
+		map_glyphinfo(0, 0, glyph, 0, &gi);
+		swift_fill_glyph(&gi, &out->glyph);
+		out->cursed  = (unsigned) obj->cursed;
+		out->blessed = (unsigned) obj->blessed;
+		out->bknown  = (unsigned) obj->bknown;
+		(void) strlcpy(out->name, doname(obj), sizeof out->name);
+	} else {
+		out->glyph.glyph = NO_GLYPH;
+		/* name[] is already "" from memset */
+	}
+}
+
+staticfn void
 swift_update_inventory(int arg)
 {
-	if (cb.updateInventory)
-		(*cb.updateInventory)(arg);
+	nhswift_inven_slot slots[NHSWIFT_SLOT_COUNT];
+
+	if (cb.updateInventory) {
+		swift_fill_inven_slot(&slots[NHEquipSlotWeapon],    NHEquipSlotWeapon,    uwep);
+		swift_fill_inven_slot(&slots[NHEquipSlotAltHand],   NHEquipSlotAltHand,   u.twoweap ? uswapwep : uarms);
+		swift_fill_inven_slot(&slots[NHEquipSlotShirt],     NHEquipSlotShirt,     uarmu);
+		swift_fill_inven_slot(&slots[NHEquipSlotArmor],     NHEquipSlotArmor,     uarm);
+		swift_fill_inven_slot(&slots[NHEquipSlotCloak],     NHEquipSlotCloak,     uarmc);
+		swift_fill_inven_slot(&slots[NHEquipSlotHelmet],    NHEquipSlotHelmet,    uarmh);
+		swift_fill_inven_slot(&slots[NHEquipSlotGloves],    NHEquipSlotGloves,    uarmg);
+		swift_fill_inven_slot(&slots[NHEquipSlotBoots],     NHEquipSlotBoots,     uarmf);
+		swift_fill_inven_slot(&slots[NHEquipSlotAmulet],    NHEquipSlotAmulet,    uamul);
+		swift_fill_inven_slot(&slots[NHEquipSlotRingRight], NHEquipSlotRingRight, uright);
+		swift_fill_inven_slot(&slots[NHEquipSlotRingLeft],  NHEquipSlotRingLeft,  uleft);
+		swift_fill_inven_slot(&slots[NHEquipSlotBlindfold], NHEquipSlotBlindfold, ublindf);
+		(*cb.updateInventory)(slots, NHSWIFT_SLOT_COUNT);
+	}
 	if (iflags.perm_invent)
 		repopulate_perminvent();
 }

@@ -52,6 +52,62 @@ enum nhswift_pick {
 #define NHSWIFT_BUFSZ 256
 
 /* ------------------------------------------------------------------ */
+/* Glyph description.                                                  */
+/* ------------------------------------------------------------------ */
+
+typedef struct nhswift_glyph {
+	int glyph;           /* raw glyph number */
+	int ttychar;         /* the ASCII character a tty port would draw */
+	int color;           /* CLR_* index, 0..15 */
+	int symidx;          /* index into the symbol set */
+	unsigned glyphflags; /* MG_* flags: pet, detected, ridden, ... */
+	int tileidx;         /* tile number, for tile-based rendering */
+} nhswift_glyph;
+
+/* ------------------------------------------------------------------ */
+/* Equipment slots (worn items / wielded weapons).                     */
+/*                                                                     */
+/* Defined once here.  In Objective-C / Swift contexts this becomes a  */
+/* proper NS_ENUM so Swift sees .weapon, .altHand, etc.  In plain C   */
+/* (winswift.c) it compiles as a regular typedef enum.                 */
+/* ------------------------------------------------------------------ */
+
+/* Total number of NHEquipSlot values — use this for array sizes. */
+#define NHSWIFT_SLOT_COUNT 12
+
+#ifdef __OBJC__
+typedef NS_ENUM(NSInteger, NHEquipSlot) {
+#else
+typedef enum {
+#endif
+	NHEquipSlotWeapon     = 0,  /* primary weapon (uwep) */
+	NHEquipSlotAltHand    = 1,  /* shield, or off-hand weapon when two-weaponing */
+	NHEquipSlotShirt      = 2,  /* under-shirt (uarmu) */
+	NHEquipSlotArmor      = 3,  /* body armor (uarm) */
+	NHEquipSlotCloak      = 4,  /* cloak (uarmc) */
+	NHEquipSlotHelmet     = 5,  /* helmet (uarmh) */
+	NHEquipSlotGloves     = 6,  /* gloves (uarmg) */
+	NHEquipSlotBoots      = 7,  /* boots (uarmf) */
+	NHEquipSlotAmulet     = 8,  /* amulet (uamul) */
+	NHEquipSlotRingRight  = 9,  /* right ring (uright) */
+	NHEquipSlotRingLeft   = 10, /* left ring (uleft) */
+	NHEquipSlotBlindfold  = 11, /* blindfold / lenses (ublindf) */
+#ifdef __OBJC__
+};                             /* NS_ENUM macro already declared the typedef */
+#else
+} NHEquipSlot;
+#endif
+
+typedef struct {
+	NHEquipSlot   slot;
+	nhswift_glyph glyph;               /* glyph.glyph == NO_GLYPH if slot is empty */
+	unsigned      cursed  : 1;
+	unsigned      blessed : 1;
+	unsigned      bknown  : 1;         /* BUC status is known */
+	char          name[NHSWIFT_BUFSZ]; /* doname() result, or "" if empty */
+} nhswift_inven_slot;
+
+/* ------------------------------------------------------------------ */
 /* Menu selection result.                                              */
 /*                                                                     */
 /* Mirrors the layout of NetHack's menu_item (anything item + long     */
@@ -65,19 +121,6 @@ typedef struct {
 	long      count;       /* selection multiplier; -1 means "all" */
 	unsigned  itemflags;   /* item flags (mirrors menu_item.itemflags) */
 } nhswift_menu_item;
-
-/* ------------------------------------------------------------------ */
-/* Glyph description.                                                  */
-/* ------------------------------------------------------------------ */
-
-typedef struct nhswift_glyph {
-	int glyph;           /* raw glyph number */
-	int ttychar;         /* the ASCII character a tty port would draw */
-	int color;           /* CLR_* index, 0..15 */
-	int symidx;          /* index into the symbol set */
-	unsigned glyphflags; /* MG_* flags: pet, detected, ridden, ... */
-	int tileidx;         /* tile number, for tile-based rendering */
-} nhswift_glyph;
 
 /* ------------------------------------------------------------------ */
 /* Status fields.                                                      */
@@ -183,7 +226,9 @@ typedef struct nhswift_callbacks {
 	void (*rawPrint)(const char *str);
 	void (*rawPrintBold)(const char *str);
 	void (*preferenceUpdate)(const char *pref);
-	void (*updateInventory)(int arg);
+	/* slots points to an array of NHSWIFT_SLOT_COUNT entries, one per worn
+	 * slot in nhswift_inven_slot_id order.  count == NHSWIFT_SLOT_COUNT. */
+	void (*updateInventory)(const nhswift_inven_slot *slots, int count);
 	void (*updatePositionBar)(const char *posbar);
 
 	/* --- message history (save/restore) --- */
