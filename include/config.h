@@ -147,6 +147,12 @@
 #endif
 #endif
 
+#ifdef SWIFT_GRAPHICS
+#ifndef DEFAULT_WINDOW_SYS
+#define DEFAULT_WINDOW_SYS "swift"
+#endif
+#endif
+
 #ifdef X11_GRAPHICS
 /*
  * There are two ways that X11 tiles may be defined:
@@ -434,7 +440,7 @@
  */
 #define INSURANCE /* allow crashed game recovery */
 
-#if !defined(MAC68K) && !defined(SHIM_GRAPHICS)
+#if !defined(MAC68K) && !defined(SHIM_GRAPHICS) && !defined(SWIFT_GRAPHICS)
 #define CHDIR /* delete if no chdir() available */
 #endif
 

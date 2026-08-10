@@ -140,7 +140,10 @@ static struct win_information window_opts[] = {
     { "mswin", "Windows GUI", TRUE },
 #endif
 #ifdef SHIM_GRAPHICS
-    { "shim", "NetHack Library Windowing Shim", TRUE },
+	{ "shim", "NetHack Library Windowing Shim", TRUE },
+#endif
+#ifdef SWIFT_GRAPHICS
+	{ "swift", "Swift GUI", TRUE },
 #endif
 #ifdef AMIGA_INTUITION
     { "amii", "Amiga Intuition (text)", TRUE },

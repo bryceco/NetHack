@@ -1,0 +1,721 @@
+/* NetHack 5.0  winswift.c */
+/* NetHack may be freely redistributed.  See license for details. */
+
+/* A windowport for a native Swift front end.
+ *
+ * Unlike win/shim, which funnels every call through one variadic callback
+ * and a format string, this port keeps NetHack's typed calling convention
+ * and forwards each proc to a matching member of a callback struct.  All
+ * NetHack types are translated here so the Swift side never needs hack.h.
+ *
+ * This file is compiled by NetHack's own makefiles, so it sees exactly the
+ * same -D flags as the core.  That is the entire point: struct layouts
+ * cannot drift between this file and libnh.a.
+ */
+
+#include "hack.h"
+#include "winswift.h"
+#include <string.h>
+
+#ifdef SWIFT_GRAPHICS
+
+/* ------------------------------------------------------------------ */
+/* Compile-time checks that winswift.h still agrees with NetHack.      */
+/* If one of these fails to compile, fix the constant in winswift.h.   */
+/* ------------------------------------------------------------------ */
+
+#define NHSWIFT_CT_ASSERT(nm, cond) typedef char nhswift_ct_##nm[(cond) ? 1 : -1]
+
+NHSWIFT_CT_ASSERT(win_message, NHSWIFT_WIN_MESSAGE == NHW_MESSAGE);
+NHSWIFT_CT_ASSERT(win_status,  NHSWIFT_WIN_STATUS  == NHW_STATUS);
+NHSWIFT_CT_ASSERT(win_map,     NHSWIFT_WIN_MAP     == NHW_MAP);
+NHSWIFT_CT_ASSERT(win_menu,    NHSWIFT_WIN_MENU    == NHW_MENU);
+NHSWIFT_CT_ASSERT(win_text,    NHSWIFT_WIN_TEXT    == NHW_TEXT);
+NHSWIFT_CT_ASSERT(pick_none,   NHSWIFT_PICK_NONE   == PICK_NONE);
+NHSWIFT_CT_ASSERT(pick_one,    NHSWIFT_PICK_ONE    == PICK_ONE);
+NHSWIFT_CT_ASSERT(pick_any,    NHSWIFT_PICK_ANY    == PICK_ANY);
+NHSWIFT_CT_ASSERT(bl_flush,    NHSWIFT_BL_FLUSH    == BL_FLUSH);
+NHSWIFT_CT_ASSERT(bl_chars,    NHSWIFT_BL_CHARACTERISTICS == BL_CHARACTERISTICS);
+NHSWIFT_CT_ASSERT(bl_reset,    NHSWIFT_BL_RESET    == BL_RESET);
+NHSWIFT_CT_ASSERT(bl_cond,     NHSWIFT_BL_CONDITION == BL_CONDITION);
+NHSWIFT_CT_ASSERT(maxbl,       NHSWIFT_MAXBLSTATS   == MAXBLSTATS);
+NHSWIFT_CT_ASSERT(bufsz,       NHSWIFT_BUFSZ       <= BUFSZ);
+
+/* nhswift_menu_item must be binary-compatible with menu_item so that
+ * swift_select_menu() can assign the bridge-allocated array directly to
+ * *menu_list without copying. */
+NHSWIFT_CT_ASSERT(mi_size,  sizeof(nhswift_menu_item) == sizeof(menu_item));
+NHSWIFT_CT_ASSERT(mi_ident, offsetof(nhswift_menu_item, identifier) == offsetof(menu_item, item));
+NHSWIFT_CT_ASSERT(mi_count, offsetof(nhswift_menu_item, count)      == offsetof(menu_item, count));
+NHSWIFT_CT_ASSERT(mi_flags, offsetof(nhswift_menu_item, itemflags)  == offsetof(menu_item, itemflags));
+
+/* ------------------------------------------------------------------ */
+/* Callback table                                                      */
+/* ------------------------------------------------------------------ */
+
+static nhswift_callbacks cb;
+
+/* call before nhmain(); paths must outlive the process */
+void
+nhswift_set_paths(const char *hackdir, const char *playground)
+{
+	int i;
+
+	if (playground) {
+		char *p = dupstr(playground);   /* trailing '/' required */
+
+		for (i = 0; i < PREFIX_COUNT; i++)
+			gf.fqn_prefix[i] = p;
+		/* then override the read-only ones back to hackdir */
+	}
+	if (hackdir) {
+		char *h = dupstr(hackdir);
+		gf.fqn_prefix[HACKPREFIX] = h;
+		gf.fqn_prefix[DATAPREFIX] = h;
+	}
+}
+
+void
+nhswift_set_callbacks(const nhswift_callbacks *newcb)
+{
+	if (newcb)
+		cb = *newcb;
+	else
+		(void) memset((genericptr_t) &cb, 0, sizeof cb);
+}
+
+staticfn void swift_fill_glyph(const glyph_info *, nhswift_glyph *);
+
+/* ------------------------------------------------------------------ */
+/* Glyph translation                                                   */
+/*                                                                     */
+/* VERIFY: the gm.* field names below are the ones used by 5.0's        */
+/* include/display.h.  windows.c uses glyphinfo->glyph, .ttychar and    */
+/* .gm.sym.symidx, which are confirmed; .gm.sym.color, .gm.glyphflags   */
+/* and .gm.tileidx are the expected neighbours but check display.h.     */
+/* ------------------------------------------------------------------ */
+
+staticfn void
+swift_fill_glyph(const glyph_info *src, nhswift_glyph *out)
+{
+	if (!src) {
+		(void) memset((genericptr_t) out, 0, sizeof *out);
+		out->glyph = NO_GLYPH;
+		return;
+	}
+	out->glyph = src->glyph;
+	out->ttychar = src->ttychar;
+	out->symidx = src->gm.sym.symidx;
+	out->color = src->gm.sym.color;
+	out->glyphflags = (unsigned) src->gm.glyphflags;
+	out->tileidx = src->gm.tileidx;
+}
+
+/* ------------------------------------------------------------------ */
+/* window_procs implementations                                        */
+/* ------------------------------------------------------------------ */
+
+staticfn void swift_init_nhwindows(int *, char **);
+staticfn void swift_player_selection(void);
+staticfn void swift_askname(void);
+staticfn void swift_get_nh_event(void);
+staticfn void swift_exit_nhwindows(const char *);
+staticfn void swift_suspend_nhwindows(const char *);
+staticfn void swift_resume_nhwindows(void);
+staticfn winid swift_create_nhwindow(int);
+staticfn void swift_clear_nhwindow(winid);
+staticfn void swift_display_nhwindow(winid, boolean);
+staticfn void swift_destroy_nhwindow(winid);
+staticfn void swift_curs(winid, int, int);
+staticfn void swift_putstr(winid, int, const char *);
+staticfn void swift_display_file(const char *, boolean);
+staticfn void swift_start_menu(winid, unsigned long);
+staticfn void swift_add_menu(winid, const glyph_info *, const anything *,
+                             char, char, int, int, const char *, unsigned int);
+staticfn void swift_end_menu(winid, const char *);
+staticfn int  swift_select_menu(winid, int, MENU_ITEM_P **);
+staticfn char swift_message_menu(char, int, const char *);
+staticfn void swift_mark_synch(void);
+staticfn void swift_wait_synch(void);
+#ifdef CLIPPING
+staticfn void swift_cliparound(int, int);
+#endif
+#ifdef POSITIONBAR
+staticfn void swift_update_positionbar(char *);
+#endif
+staticfn void swift_print_glyph(winid, coordxy, coordxy,
+								const glyph_info *, const glyph_info *);
+staticfn void swift_raw_print(const char *);
+staticfn void swift_raw_print_bold(const char *);
+staticfn int swift_nhgetch(void);
+staticfn int swift_nh_poskey(coordxy *, coordxy *, int *);
+staticfn void swift_nhbell(void);
+staticfn int swift_doprev_message(void);
+staticfn char swift_yn_function(const char *, const char *, char);
+staticfn void swift_getlin(const char *, char *);
+staticfn int swift_get_ext_cmd(void);
+staticfn void swift_number_pad(int);
+staticfn void swift_delay_output(void);
+#ifdef CHANGE_COLOR
+staticfn void swift_change_color(int, long, int);
+staticfn char *swift_get_color_string(void);
+#endif
+staticfn void swift_preference_update(const char *);
+staticfn char *swift_getmsghistory(boolean);
+staticfn void swift_putmsghistory(const char *, boolean);
+staticfn void swift_status_init(void);
+staticfn void swift_status_update(int, genericptr_t, int, int, int,
+								  unsigned long *);
+staticfn void swift_update_inventory(int);
+staticfn win_request_info *swift_ctrl_nhwindow(winid, int,
+											   win_request_info *);
+
+/* --- lifecycle --- */
+
+staticfn void
+swift_init_nhwindows(int *argcp, char **argv)
+{
+	if (!cb.initWindows)
+		panic("winswift: nhswift_set_callbacks() was never called");
+
+	if (cb.initWindows)
+		(*cb.initWindows)(argcp, argv);
+
+	iflags.window_inited = TRUE;
+}
+
+staticfn void
+swift_exit_nhwindows(const char *lastgasp)
+{
+	if (cb.exitWindows)
+		(*cb.exitWindows)(lastgasp);
+
+	iflags.window_inited = FALSE;
+}
+
+staticfn void
+swift_suspend_nhwindows(const char *str)
+{
+	if (cb.suspendWindows)
+		(*cb.suspendWindows)(str);
+}
+
+staticfn void
+swift_resume_nhwindows(void)
+{
+	if (cb.resumeWindows)
+		(*cb.resumeWindows)();
+}
+
+/* --- character creation --- */
+
+staticfn void
+swift_player_selection(void)
+{
+	int use_builtin = 1;
+
+	if (cb.playerSelection)
+		use_builtin = (*cb.playerSelection)();
+
+	/* Fall back to NetHack's own role/race/gender/alignment dialog, which
+	   drives it through our menu procs.  80 is the assumed screen width. */
+	if (use_builtin)
+		genl_player_setup(80);
+}
+
+staticfn void
+swift_askname(void)
+{
+	char buf[PL_NSIZ];
+
+	buf[0] = '\0';
+	if (cb.askName)
+		(*cb.askName)(buf, (int) sizeof buf);
+
+	if (buf[0]) {
+		buf[sizeof buf - 1] = '\0';
+		Strcpy(svp.plname, buf);
+	}
+	/* If the callback declined to supply one, the core's existing plname
+	   (from config file, -u, or $USER) stands. */
+}
+
+/* --- windows --- */
+
+staticfn winid
+swift_create_nhwindow(int type)
+{
+	int w;
+
+	if (!cb.createWindow)
+		return WIN_ERR;
+	w = (*cb.createWindow)(type);
+	return (w >= 0) ? (winid) w : WIN_ERR;
+}
+
+staticfn void
+swift_clear_nhwindow(winid window)
+{
+	if (cb.clearWindow)
+		(*cb.clearWindow)((int) window);
+}
+
+staticfn void
+swift_display_nhwindow(winid window, boolean blocking)
+{
+	if (cb.displayWindow)
+		(*cb.displayWindow)((int) window, blocking ? 1 : 0);
+}
+
+staticfn void
+swift_destroy_nhwindow(winid window)
+{
+	if (cb.destroyWindow)
+		(*cb.destroyWindow)((int) window);
+}
+
+staticfn void
+swift_curs(winid window, int x, int y)
+{
+	if (cb.moveCursor)
+		(*cb.moveCursor)((int) window, x, y);
+}
+
+staticfn void
+swift_putstr(winid window, int attr, const char *str)
+{
+	if (cb.putString)
+		(*cb.putString)((int) window, attr, str ? str : "");
+}
+
+staticfn void
+swift_display_file(const char *name, boolean complain)
+{
+	if (cb.displayFile)
+		(*cb.displayFile)(name, complain ? 1 : 0);
+	else
+		genl_display_file(name, complain);
+}
+
+/* --- map --- */
+
+staticfn void
+swift_print_glyph(winid window, coordxy x, coordxy y,
+				  const glyph_info *glyphinfo, const glyph_info *bkglyphinfo)
+{
+	nhswift_glyph fg, bg;
+
+	if (!cb.printGlyph)
+		return;
+	swift_fill_glyph(glyphinfo, &fg);
+	swift_fill_glyph(bkglyphinfo, &bg);
+	(*cb.printGlyph)((int) window, (int) x, (int) y, &fg, &bg);
+}
+
+#ifdef CLIPPING
+staticfn void
+swift_cliparound(int x, int y)
+{
+	if (cb.clipAround)
+		(*cb.clipAround)(x, y);
+}
+#endif
+
+#ifdef POSITIONBAR
+staticfn void
+swift_update_positionbar(char *posbar)
+{
+	if (cb.updatePositionBar)
+		(*cb.updatePositionBar)(posbar);
+}
+#endif
+
+/* --- menus --- */
+
+staticfn void
+swift_start_menu(winid window, unsigned long mbehavior)
+{
+	if (cb.startMenu)
+		(*cb.startMenu)((int) window, mbehavior);
+}
+
+staticfn void
+swift_add_menu(winid window, const glyph_info *glyphinfo,
+               const anything *identifier, char ch, char gch, int attr,
+               int clr, const char *str, unsigned int itemflags)
+{
+	nhswift_glyph ginfo;
+	uintptr_t ident = 0;
+
+	if (!cb.addMenu)
+		return;
+
+	/* Reinterpret the anything union as a uintptr_t.  On all supported
+	 * platforms sizeof(anything) == sizeof(uintptr_t), so this is lossless.
+	 * The Swift side stores it opaquely and hands it back unchanged. */
+	if (identifier) {
+		size_t copy = sizeof *identifier < sizeof ident
+		              ? sizeof *identifier : sizeof ident;
+		(void) memcpy((genericptr_t) &ident,
+		              (const genericptr_t) identifier, copy);
+	}
+
+	swift_fill_glyph(glyphinfo, &ginfo);
+	(*cb.addMenu)((int) window, &ginfo, (int) ch, (int) gch, attr,
+	               clr, str ? str : "", itemflags, ident);
+}
+
+staticfn void
+swift_end_menu(winid window, const char *prompt)
+{
+	if (cb.endMenu)
+		(*cb.endMenu)((int) window, prompt);
+}
+
+staticfn int
+swift_select_menu(winid window, int how, MENU_ITEM_P **menu_list)
+{
+	nhswift_menu_item *sitems = (nhswift_menu_item *) 0;
+	int n;
+
+	*menu_list = (menu_item *) 0;
+
+	if (!cb.selectMenu)
+		return 0;
+
+	n = (*cb.selectMenu)((int) window, how, &sitems);
+
+	if (n > 0 && sitems) {
+		/* The bridge malloc'd sitems; nhswift_menu_item is binary-compatible
+		 * with menu_item (verified by the compile-time asserts above), so
+		 * we can hand the allocation directly to the core.  The core owns
+		 * the array and will free() it when done. */
+		*menu_list = (menu_item *) sitems;
+		return n;
+	}
+	free((genericptr_t) sitems); /* free(NULL) is a harmless no-op */
+	return (n < 0) ? -1 : 0;
+}
+
+staticfn char
+swift_message_menu(char let, int how, const char *mesg)
+{
+	if (cb.messageMenu)
+		return (char) (*cb.messageMenu)((int) let, how, mesg);
+	return genl_message_menu(let, how, mesg);
+}
+
+/* --- input --- */
+
+staticfn int
+swift_nhgetch(void)
+{
+	if (!cb.getChar)
+		return '\033';
+	return (*cb.getChar)();
+}
+
+staticfn int
+swift_nh_poskey(coordxy *x, coordxy *y, int *mod)
+{
+	int ix = 0, iy = 0, imod = 0, ret;
+
+	if (!cb.posKey)
+		return swift_nhgetch();
+
+	ret = (*cb.posKey)(&ix, &iy, &imod);
+	if (x)
+		*x = (coordxy) ix;
+	if (y)
+		*y = (coordxy) iy;
+	if (mod)
+		*mod = imod;
+	return ret;
+}
+
+staticfn char
+swift_yn_function(const char *query, const char *resp, char deflt)
+{
+	int ret;
+
+	if (!cb.ynFunction)
+		return deflt ? deflt : '\033';
+
+	ret = (*cb.ynFunction)(query, resp, (int) deflt);
+	return (char) ret;
+}
+
+staticfn void
+swift_getlin(const char *query, char *bufp)
+{
+	if (!bufp)
+		return;
+	bufp[0] = '\0';
+	if (cb.getLine)
+		(*cb.getLine)(query, bufp, BUFSZ);
+	else
+		Strcpy(bufp, "\033");
+}
+
+staticfn int
+swift_get_ext_cmd(void)
+{
+	if (!cb.getExtCmd)
+		return -1;
+	return (*cb.getExtCmd)();
+}
+
+staticfn int
+swift_doprev_message(void)
+{
+	if (!cb.prevMessage)
+		return 0;
+	return (*cb.prevMessage)();
+}
+
+staticfn void
+swift_number_pad(int state)
+{
+	if (cb.numberPad)
+		(*cb.numberPad)(state);
+}
+
+/* --- synchronization / misc --- */
+
+staticfn void
+swift_get_nh_event(void)
+{
+	if (cb.getEvent)
+		(*cb.getEvent)();
+}
+
+staticfn void
+swift_mark_synch(void)
+{
+	if (cb.markSynch)
+		(*cb.markSynch)();
+}
+
+staticfn void
+swift_wait_synch(void)
+{
+	if (cb.waitSynch)
+		(*cb.waitSynch)();
+}
+
+staticfn void
+swift_delay_output(void)
+{
+	if (cb.delayOutput)
+		(*cb.delayOutput)();
+}
+
+staticfn void
+swift_nhbell(void)
+{
+	if (cb.bell)
+		(*cb.bell)();
+}
+
+/* raw_print must work before init_nhwindows() and after a teardown, so it
+   falls back to stderr rather than silently dropping the message. */
+staticfn void
+swift_raw_print(const char *str)
+{
+	if (cb.rawPrint)
+		(*cb.rawPrint)(str ? str : "");
+	else
+		(void) fprintf(stderr, "%s\n", str ? str : "");
+	if (str && *str)
+		iflags.raw_printed++;
+}
+
+staticfn void
+swift_raw_print_bold(const char *str)
+{
+	if (cb.rawPrintBold)
+		(*cb.rawPrintBold)(str ? str : "");
+	else
+		swift_raw_print(str);
+}
+
+staticfn void
+swift_preference_update(const char *pref)
+{
+	if (cb.preferenceUpdate)
+		(*cb.preferenceUpdate)(pref);
+}
+
+staticfn void
+swift_update_inventory(int arg)
+{
+	if (cb.updateInventory)
+		(*cb.updateInventory)(arg);
+	if (iflags.perm_invent)
+		repopulate_perminvent();
+}
+
+/* --- message history --- */
+
+staticfn char *
+swift_getmsghistory(boolean init)
+{
+	static char histbuf[BUFSZ];
+
+	if (!cb.getMsgHistory)
+		return (char *) 0;
+
+	histbuf[0] = '\0';
+	if (!(*cb.getMsgHistory)(init ? 1 : 0, histbuf, (int) sizeof histbuf))
+		return (char *) 0;
+	if (!histbuf[0])
+		return (char *) 0;
+	histbuf[sizeof histbuf - 1] = '\0';
+	return histbuf;
+}
+
+staticfn void
+swift_putmsghistory(const char *msg, boolean restoring)
+{
+	if (cb.putMsgHistory)
+		(*cb.putMsgHistory)(msg, restoring ? 1 : 0);
+	else
+		genl_putmsghistory(msg, restoring);
+}
+
+/* --- status --- */
+
+staticfn void
+swift_status_init(void)
+{
+	if (cb.statusInit)
+		(*cb.statusInit)();
+}
+
+staticfn void
+swift_status_enablefield(int fieldidx, const char *nm, const char *fmt,
+						 boolean enable);
+
+staticfn void
+swift_status_enablefield(int fieldidx, const char *nm, const char *fmt,
+						 boolean enable)
+{
+	if (cb.statusEnableField)
+		(*cb.statusEnableField)(fieldidx, nm, fmt, enable ? 1 : 0);
+	/* keep the core's own bookkeeping in sync as well */
+	genl_status_enablefield(fieldidx, nm, fmt, enable);
+}
+
+/* The second argument is a char* for most fields but a long* for
+   BL_CONDITION.  Discriminate here so Swift never has to. */
+staticfn void
+swift_status_update(int fldidx, genericptr_t ptr, int chg, int percent,
+					int color, unsigned long *colormasks)
+{
+	const char *text = (const char *) 0;
+	long condbits = 0L;
+
+	if (!cb.statusUpdate)
+		return;
+
+	if (fldidx == BL_CONDITION)
+		condbits = ptr ? *(long *) ptr : 0L;
+	else if (fldidx >= 0)
+		text = (const char *) ptr;
+
+	(*cb.statusUpdate)(fldidx, text, condbits, chg, percent, color,
+						colormasks);
+}
+
+/* --- colors --- */
+
+#ifdef CHANGE_COLOR
+staticfn void
+swift_change_color(int color, long rgb, int reverse)
+{
+	if (cb.changeColor)
+		(*cb.changeColor)(color, rgb, reverse);
+}
+
+staticfn char *
+swift_get_color_string(void)
+{
+	if (cb.getColorString)
+		return (char *) (*cb.getColorString)();
+	return (char *) 0;
+}
+#endif /* CHANGE_COLOR */
+
+/* --- window control --- */
+
+staticfn win_request_info *
+swift_ctrl_nhwindow(winid window UNUSED, int request UNUSED,
+					win_request_info *wri UNUSED)
+{
+	return (win_request_info *) 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Interface definition used in windows.c                              */
+/*                                                                     */
+/* The order below must match struct window_procs in include/winprocs.h */
+/* exactly.  It mirrors win/shim/winshim.c, which is a working 5.0 port.*/
+/* ------------------------------------------------------------------ */
+
+struct window_procs swift_procs = {
+	WPID(swift),
+	(0
+	 | WC_ASCII_MAP
+	 | WC_MOUSE_SUPPORT
+	 | WC_COLOR | WC_HILITE_PET | WC_INVERSE | WC_EIGHT_BIT_IN),
+	(0
+#if defined(SELECTSAVED)
+	 | WC2_SELECTSAVED
+#endif
+#if defined(STATUS_HILITES)
+	 | WC2_HILITE_STATUS | WC2_HITPOINTBAR | WC2_RESET_STATUS
+#endif
+	 | WC2_FLUSH_STATUS
+	 | WC2_DARKGRAY | WC2_SUPPRESS_HIST | WC2_STATUSLINES),
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, /* has_color[] */
+	swift_init_nhwindows, swift_player_selection, swift_askname,
+	swift_get_nh_event,
+	swift_exit_nhwindows, swift_suspend_nhwindows, swift_resume_nhwindows,
+	swift_create_nhwindow, swift_clear_nhwindow, swift_display_nhwindow,
+	swift_destroy_nhwindow, swift_curs, swift_putstr, genl_putmixed,
+	swift_display_file, swift_start_menu, swift_add_menu, swift_end_menu,
+	swift_select_menu, swift_message_menu, swift_mark_synch,
+	swift_wait_synch,
+#ifdef CLIPPING
+	swift_cliparound,
+#endif
+#ifdef POSITIONBAR
+	swift_update_positionbar,
+#endif
+	swift_print_glyph, swift_raw_print, swift_raw_print_bold, swift_nhgetch,
+	swift_nh_poskey, swift_nhbell, swift_doprev_message, swift_yn_function,
+	swift_getlin, swift_get_ext_cmd, swift_number_pad, swift_delay_output,
+#ifdef CHANGE_COLOR
+	swift_change_color,
+#ifdef MAC68K
+	/* VERIFY: winshim.c tests `MAC` here while windows.c tests `MAC68K`.
+	   Whichever winprocs.h actually uses is the one that belongs here --
+	   getting it wrong shifts every later member by two slots. */
+	(void (*)(int)) 0, (short (*)(winid, char *)) 0,
+#endif
+	swift_get_color_string,
+#endif /* CHANGE_COLOR */
+	genl_outrip,
+	swift_preference_update,
+	swift_getmsghistory, swift_putmsghistory,
+	swift_status_init,
+	genl_status_finish, swift_status_enablefield,
+	swift_status_update,
+	genl_can_suspend_yes,
+	swift_update_inventory,
+	swift_ctrl_nhwindow,
+};
+
+#endif /* SWIFT_GRAPHICS */
+
+/*winswift.c*/

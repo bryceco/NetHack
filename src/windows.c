@@ -45,6 +45,9 @@ extern struct window_procs mswin_procs;
 #ifdef SHIM_GRAPHICS
 extern struct window_procs shim_procs;
 #endif
+#ifdef SWIFT_GRAPHICS
+extern struct window_procs swift_procs;
+#endif
 #ifdef WINCHAIN
 extern struct window_procs chainin_procs;
 extern void chainin_procs_init(int);
@@ -130,7 +133,10 @@ static struct win_choices {
     { &mswin_procs, 0 CHAINR(0) },
 #endif
 #ifdef SHIM_GRAPHICS
-    { &shim_procs, 0 CHAINR(0) },
+	{ &shim_procs, 0 CHAINR(0) },
+#endif
+#ifdef SWIFT_GRAPHICS
+	{ &swift_procs, 0 CHAINR(0) },
 #endif
 #ifdef WINCHAIN
     { &chainin_procs, chainin_procs_init, chainin_procs_chain },
