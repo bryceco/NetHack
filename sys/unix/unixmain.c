@@ -54,6 +54,10 @@ extern void init_linux_cons(void);
 static void wd_message(void);
 static struct passwd *get_unix_pw(void);
 
+#ifdef LIBNH
+#define main nhmain
+#endif
+
 int
 main(int argc, char *argv[])
 {
