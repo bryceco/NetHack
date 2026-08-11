@@ -84,32 +84,23 @@ nhswift_set_callbacks(const nhswift_callbacks *newcb)
 		(void) memset((genericptr_t) &cb, 0, sizeof cb);
 }
 
-staticfn void swift_fill_glyph(const glyph_info *, nhswift_glyph *);
-
 /* ------------------------------------------------------------------ */
-/* Glyph translation                                                   */
+/* Layout verification                                                 */
 /*                                                                     */
-/* VERIFY: the gm.* field names below are the ones used by 5.0's        */
-/* include/display.h.  windows.c uses glyphinfo->glyph, .ttychar and    */
-/* .gm.sym.symidx, which are confirmed; .gm.sym.color, .gm.glyphflags   */
-/* and .gm.tileidx are the expected neighbours but check display.h.     */
+/* nhswift_glyph (in winswift.h) must be identical in layout to        */
+/* glyph_info (in wintype.h) so that a glyph_info pointer can be      */
+/* passed to the Swift layer without copying.  These assertions catch  */
+/* any divergence when NetHack's structs are updated.                  */
 /* ------------------------------------------------------------------ */
 
-staticfn void
-swift_fill_glyph(const glyph_info *src, nhswift_glyph *out)
-{
-	if (!src) {
-		(void) memset((genericptr_t) out, 0, sizeof *out);
-		out->glyph = NO_GLYPH;
-		return;
-	}
-	out->glyph = src->glyph;
-	out->ttychar = src->ttychar;
-	out->symidx = src->gm.sym.symidx;
-	out->color = src->gm.sym.color;
-	out->glyphflags = (unsigned) src->gm.glyphflags;
-	out->tileidx = src->gm.tileidx;
-}
+_Static_assert(sizeof(nhswift_glyph) == sizeof(glyph_info),
+               "nhswift_glyph vs glyph_info: size mismatch");
+_Static_assert(offsetof(nhswift_glyph, glyph) == offsetof(glyph_info, glyph),
+               "nhswift_glyph vs glyph_info: .glyph offset mismatch");
+_Static_assert(offsetof(nhswift_glyph, gm.glyphflags) == offsetof(glyph_info, gm.glyphflags),
+               "nhswift_glyph vs glyph_info: .gm.glyphflags offset mismatch");
+_Static_assert(offsetof(nhswift_glyph, gm.tileidx) == offsetof(glyph_info, gm.tileidx),
+               "nhswift_glyph vs glyph_info: .gm.tileidx offset mismatch");
 
 /* ------------------------------------------------------------------ */
 /* window_procs implementations                                        */
@@ -304,13 +295,11 @@ staticfn void
 swift_print_glyph(winid window, coordxy x, coordxy y,
 				  const glyph_info *glyphinfo, const glyph_info *bkglyphinfo)
 {
-	nhswift_glyph fg, bg;
-
 	if (!cb.printGlyph)
 		return;
-	swift_fill_glyph(glyphinfo, &fg);
-	swift_fill_glyph(bkglyphinfo, &bg);
-	(*cb.printGlyph)((int) window, (int) x, (int) y, &fg, &bg);
+	(*cb.printGlyph)((int) window, (int) x, (int) y,
+	                 (const nhswift_glyph *) glyphinfo,
+	                 (const nhswift_glyph *) bkglyphinfo);
 }
 
 #ifdef CLIPPING
@@ -345,7 +334,6 @@ swift_add_menu(winid window, const glyph_info *glyphinfo,
                const anything *identifier, char ch, char gch, int attr,
                int clr, const char *str, unsigned int itemflags)
 {
-	nhswift_glyph ginfo;
 	uintptr_t ident = 0;
 
 	if (!cb.addMenu)
@@ -361,8 +349,7 @@ swift_add_menu(winid window, const glyph_info *glyphinfo,
 		              (const genericptr_t) identifier, copy);
 	}
 
-	swift_fill_glyph(glyphinfo, &ginfo);
-	(*cb.addMenu)((int) window, &ginfo, (int) ch, (int) gch, attr,
+	(*cb.addMenu)((int) window, (const nhswift_glyph *) glyphinfo, (int) ch, (int) gch, attr,
 	               clr, str ? str : "", itemflags, ident);
 }
 
@@ -556,7 +543,7 @@ swift_fill_inven_slot(nhswift_inven_slot *out, NHEquipSlot id, struct obj *obj)
 		glyph_info gi;
 		int glyph = obj_to_glyph(obj, rn2_on_display_rng);
 		map_glyphinfo(0, 0, glyph, 0, &gi);
-		swift_fill_glyph(&gi, &out->glyph);
+		(void) memcpy(&out->glyph, &gi, sizeof(nhswift_glyph));
 		out->cursed  = (unsigned) obj->cursed;
 		out->blessed = (unsigned) obj->blessed;
 		out->bknown  = (unsigned) obj->bknown;

@@ -53,15 +53,39 @@ enum nhswift_pick {
 
 /* ------------------------------------------------------------------ */
 /* Glyph description.                                                  */
+/*                                                                     */
+/* nhswift_glyph mirrors glyph_info (struct glyphinfo) from NetHack's  */
+/* wintype.h, field-for-field and byte-for-byte, so that a             */
+/* const glyph_info * can be passed to the Swift layer directly as     */
+/* const nhswift_glyph * with no field-by-field copy.                  */
+/* winswift.c contains _Static_assert checks that verify the layout.   */
+/*                                                                     */
+/* NOTE: ENHANCED_SYMBOLS is assumed defined (as it is on macOS), so   */
+/* nhswift_glyph_map includes the trailing unicode pointer.             */
 /* ------------------------------------------------------------------ */
 
+/* Mirrors struct classic_representation in NetHack's wintype.h. */
+typedef struct {
+	int color;
+	int symidx;
+} nhswift_classic_sym;
+
+/* Mirrors glyph_map (struct glyph_map_entry) in NetHack's wintype.h. */
+typedef struct {
+	unsigned            glyphflags;
+	nhswift_classic_sym sym;
+	uint32_t            customcolor;
+	uint16_t            color256idx;
+	int16_t             tileidx;   /* tile index for tile-based rendering */
+	void               *u;        /* struct unicode_representation * (ENHANCED_SYMBOLS) */
+} nhswift_glyph_map;
+
+/* Mirrors glyph_info (struct glyphinfo) in NetHack's wintype.h. */
 typedef struct nhswift_glyph {
-	int glyph;           /* raw glyph number */
-	int ttychar;         /* the ASCII character a tty port would draw */
-	int color;           /* CLR_* index, 0..15 */
-	int symidx;          /* index into the symbol set */
-	unsigned glyphflags; /* MG_* flags: pet, detected, ridden, ... */
-	int tileidx;         /* tile number, for tile-based rendering */
+	int               glyph;      /* raw glyph number; NO_GLYPH (-1) = empty */
+	int               ttychar;    /* ASCII char a tty port would draw */
+	uint32_t          framecolor;
+	nhswift_glyph_map gm;
 } nhswift_glyph;
 
 /* ------------------------------------------------------------------ */
