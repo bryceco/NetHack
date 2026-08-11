@@ -346,16 +346,18 @@ GITPREFIX = -DNETHACK_GIT_PREFIX=\"$(GIT_PREFIX)\"
 endif
 
 ifdef WANT_LIBNH
-CFLAGS += -DSWIFT_GRAPHICS -DNOTTYGRAPHICS -DNOSHELL -DLIBNH
+CFLAGS += -DSWIFT_GRAPHICS -DNOTTYGRAPHICS -DNOSHELL -DLIBNH -DTILES_IN_GLYPHMAP
 NHCFLAGS += -DNOCWD_ASSUMPTIONS
 LIBNHSYSSRC = ../sys/libnh/unixmain.c \
 		../sys/share/ioctl.c ../sys/share/unixtty.c \
 		../sys/unix/unixunix.c ../sys/unix/unixres.c \
-		../win/swift/winswift.c
+		../win/swift/winswift.c \
+		$(SRCDIR)/tile.c
 LIBNHSYSOBJ = $(TARGETPFX)unixmain.o $(TARGETPFX)ioctl.o \
 		$(TARGETPFX)unixtty.o $(TARGETPFX)unixunix.o \
 		$(TARGETPFX)unixres.o  \
-		$(TARGETPFX)winswift.o
+		$(TARGETPFX)winswift.o \
+		$(TARGETPFX)tile.o
 #don't bother building the game executable as it will fail
 #without winshim
 override GAME=
@@ -572,6 +574,8 @@ $(TARGETPFX)libnh.a: $(LUALIB) $(HOBJ) $(LIBNHSYSOBJ) $(DATE_O) $(TARGET_HACKLIB
 	@echo "$@ built."
 $(TARGETPFX)libnhmain.o : ../sys/libnh/libnhmain.c $(HACK_H)
 	$(CC) $(CFLAGS) -c -o$@ $<
+$(TARGETPFX)tile.o : $(SRCDIR)/tile.c $(HACK_H)
+	$(CC) $(CFLAGS) -c -o $@ $(SRCDIR)/tile.c
 # dependency tool added this to Makefile.src
 #$(TARGETPFX)winshim.o : ../win/shim/winshim.c $(HACK_H)
 #	$(CC) $(CFLAGS) -c -o$@ $<
