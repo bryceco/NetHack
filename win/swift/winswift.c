@@ -174,6 +174,7 @@ swift_init_nhwindows(int *argcp, char **argv)
 		(*cb.initWindows)(argcp, argv);
 
 	iflags.window_inited = TRUE;
+	iflags.perm_invent = TRUE;
 }
 
 staticfn void
@@ -549,7 +550,7 @@ swift_fill_inven_slot(nhswift_inven_slot *out, NHEquipSlot id, struct obj *obj)
 		out->bknown  = (unsigned) obj->bknown;
 		(void) strlcpy(out->name, doname(obj), sizeof out->name);
 	} else {
-		out->glyph.glyph = NO_GLYPH;
+		out->glyph.glyph = -1;
 		/* name[] is already "" from memset */
 	}
 }
@@ -574,8 +575,6 @@ swift_update_inventory(int arg)
 		swift_fill_inven_slot(&slots[NHEquipSlotBlindfold], NHEquipSlotBlindfold, ublindf);
 		(*cb.updateInventory)(slots, NHSWIFT_SLOT_COUNT);
 	}
-	if (iflags.perm_invent)
-		repopulate_perminvent();
 }
 
 /* --- message history --- */
