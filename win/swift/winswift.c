@@ -485,6 +485,12 @@ swift_mark_synch(void)
 		(*cb.markSynch)();
 }
 
+/*
+wait_synch()    -- Wait until all pending output is complete (*flush*() for
+				   streams goes here).
+				-- May also deal with exposure events etc. so that the
+				   display is OK when return from wait_synch().
+*/
 staticfn void
 swift_wait_synch(void)
 {
