@@ -113,6 +113,15 @@ nhswift_validalign(int role, int race, int align)
 	return (int)validalign(role, race, align);
 }
 
+int
+nhswift_glyph_to_tile(int glyph)
+{
+	extern glyph_map glyphmap[];
+	if (glyph < 0 || glyph >= MAX_GLYPH)
+		return -1;
+	return (int)glyphmap[glyph].tileidx;
+}
+
 /* ------------------------------------------------------------------ */
 /* Layout verification                                                 */
 /*                                                                     */

@@ -337,6 +337,10 @@ int nhswift_validrace(int roleIndex, int raceIndex);
 int nhswift_validgend(int roleIndex, int raceIndex, int genderIndex);
 int nhswift_validalign(int roleIndex, int raceIndex, int alignIndex);
 
+/* Map a NetHack glyph number to its tile-sheet index (the value stored in
+ * glyphmap[glyph].tileidx).  Returns -1 for out-of-range glyph numbers. */
+int nhswift_glyph_to_tile(int glyph);
+
 #ifdef __cplusplus
 }
 #endif
