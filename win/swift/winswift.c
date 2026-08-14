@@ -85,6 +85,35 @@ nhswift_set_callbacks(const nhswift_callbacks *newcb)
 }
 
 /* ------------------------------------------------------------------ */
+/* Validity queries — thin wrappers around NetHack's valid* functions. */
+/* Safe to call from any thread while the game thread is blocked.      */
+/* ------------------------------------------------------------------ */
+
+int
+nhswift_validrole(int role)
+{
+	return (int)validrole(role);
+}
+
+int
+nhswift_validrace(int role, int race)
+{
+	return (int)validrace(role, race);
+}
+
+int
+nhswift_validgend(int role, int race, int gender)
+{
+	return (int)validgend(role, race, gender);
+}
+
+int
+nhswift_validalign(int role, int race, int align)
+{
+	return (int)validalign(role, race, align);
+}
+
+/* ------------------------------------------------------------------ */
 /* Layout verification                                                 */
 /*                                                                     */
 /* nhswift_glyph (in winswift.h) must be identical in layout to        */
@@ -205,15 +234,52 @@ swift_resume_nhwindows(void)
 staticfn void
 swift_player_selection(void)
 {
-	int use_builtin = 1;
+	nhswift_playerOptions opts;
+	nhswift_playerSelection result;
+	int i, use_custom = 0;
+
+	memset(&opts, 0, sizeof opts);
+	memset(&result, 0, sizeof result);
+	result.roleIndex   = NHSWIFT_ROLE_RANDOM;
+	result.raceIndex   = NHSWIFT_ROLE_RANDOM;
+	result.genderIndex = NHSWIFT_ROLE_RANDOM;
+	result.alignIndex  = NHSWIFT_ROLE_RANDOM;
+
+	/* roles[] is terminated by a NULL name.m pointer. */
+	for (i = 0; roles[i].name.m && i < NHSWIFT_MAX_ROLES; i++)
+		opts.roles[i] = roles[i].name.m; // male name only
+	opts.roleCount = i;
+
+	/* races[] is terminated by a NULL noun pointer. */
+	for (i = 0; races[i].noun && i < NHSWIFT_MAX_RACES; i++)
+		opts.races[i] = races[i].noun;
+	opts.raceCount = i;
+
+	/* ROLE_GENDERS is the count of player-selectable genders (male/female). */
+	for (i = 0; i < ROLE_GENDERS && i < NHSWIFT_MAX_GENDERS; i++)
+		opts.genders[i] = genders[i].adj;
+	opts.genderCount = ROLE_GENDERS;
+
+	/* ROLE_ALIGNS is the count of player-selectable alignments (lawful/neutral/chaotic). */
+	for (i = 0; i < ROLE_ALIGNS && i < NHSWIFT_MAX_ALIGNS; i++)
+		opts.aligns[i] = aligns[i].adj;
+	opts.alignCount = ROLE_ALIGNS;
 
 	if (cb.playerSelection)
-		use_builtin = (*cb.playerSelection)();
+		use_custom = (*cb.playerSelection)(&opts, &result);
 
-	/* Fall back to NetHack's own role/race/gender/alignment dialog, which
-	   drives it through our menu procs.  80 is the assumed screen width. */
-	if (use_builtin)
+	if (use_custom) {
+		flags.initrole  = result.roleIndex;
+		flags.initrace  = result.raceIndex;
+		flags.initgend  = result.genderIndex;
+		flags.initalign = result.alignIndex;
+		if (result.playerName[0])
+			Strcpy(svp.plname, result.playerName);
+	} else {
+		/* Fall back to NetHack's own role/race/gender/alignment dialog,
+		   which drives it through our menu procs. */
 		genl_player_setup(80);
+	}
 }
 
 staticfn void
@@ -547,10 +613,10 @@ swift_fill_inven_slot(nhswift_inven_slot *out, NHEquipSlot id, struct obj *obj)
 	(void) memset((genericptr_t) out, 0, sizeof *out);
 	out->slot = id;
 	if (obj) {
-		glyph_info gi;
+		glyph_info gli;
 		int glyph = obj_to_glyph(obj, rn2_on_display_rng);
-		map_glyphinfo(0, 0, glyph, 0, &gi);
-		(void) memcpy(&out->glyph, &gi, sizeof(nhswift_glyph));
+		map_glyphinfo(0, 0, glyph, 0, &gli);
+		(void) memcpy(&out->glyph, &gli, sizeof(nhswift_glyph));
 		out->cursed  = (unsigned) obj->cursed;
 		out->blessed = (unsigned) obj->blessed;
 		out->bknown  = (unsigned) obj->bknown;

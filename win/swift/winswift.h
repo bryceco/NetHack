@@ -52,6 +52,46 @@ enum nhswift_pick {
 #define NHSWIFT_BUFSZ 256
 
 /* ------------------------------------------------------------------ */
+/* Player character selection.                                          */
+/*                                                                     */
+/* winswift.c reads the NetHack role/race/gender/alignment tables and  */
+/* passes them to the playerSelection callback so the front end can    */
+/* present a native UI without knowing about NetHack's internal structs.*/
+/* ------------------------------------------------------------------ */
+
+/* Maximum array sizes — generous enough for any foreseeable NetHack. */
+#define NHSWIFT_MAX_ROLES   16
+#define NHSWIFT_MAX_RACES    8
+#define NHSWIFT_MAX_GENDERS  3
+#define NHSWIFT_MAX_ALIGNS   4
+
+/* Matches NetHack's ROLE_RANDOM (-2) and ROLE_NONE (-1). */
+#define NHSWIFT_ROLE_RANDOM (-2)
+#define NHSWIFT_ROLE_NONE   (-1)
+
+/* Player name buffer — matches NetHack's PL_NSIZ (32). */
+#define NHSWIFT_PLNAME_SZ 32
+
+/* Passed from winswift.c to the playerSelection callback.
+ * Each pointer points directly into NetHack's static role/race/gender/align
+ * tables, so the strings are valid for the lifetime of the callback. */
+typedef struct {
+	const char *roles[NHSWIFT_MAX_ROLES];     int roleCount;
+	const char *races[NHSWIFT_MAX_RACES];     int raceCount;
+	const char *genders[NHSWIFT_MAX_GENDERS]; int genderCount;
+	const char *aligns[NHSWIFT_MAX_ALIGNS];   int alignCount;
+} nhswift_playerOptions;
+
+/* Filled by the playerSelection callback; winswift.c uses it to set flags. */
+typedef struct {
+	int  roleIndex;                      /* index into roles[],   or NHSWIFT_ROLE_RANDOM */
+	int  raceIndex;                      /* index into races[],   or NHSWIFT_ROLE_RANDOM */
+	int  genderIndex;                    /* index into genders[], or NHSWIFT_ROLE_RANDOM */
+	int  alignIndex;                     /* index into aligns[],  or NHSWIFT_ROLE_RANDOM */
+	char playerName[NHSWIFT_PLNAME_SZ]; /* empty string = keep existing plname          */
+} nhswift_playerSelection;
+
+/* ------------------------------------------------------------------ */
 /* Glyph description.                                                  */
 /*                                                                     */
 /* nhswift_glyph mirrors glyph_info (struct glyphinfo) from NetHack's  */
@@ -193,9 +233,11 @@ typedef struct nhswift_callbacks {
 	void (*resumeWindows)(void);
 
 	/* --- character creation --- */
-	/* Return 1 to let NetHack run its own built-in selection dialog,
-	 * 0 if you have populated the role/race/gender/align yourself. */
-	int (*playerSelection)(void);
+	/* opts contains the available role/race/gender/alignment strings read
+	 * from NetHack's tables.  Fill *result with the user's choices and
+	 * return 1; or return 0 to fall back to NetHack's built-in dialog. */
+	int (*playerSelection)(const nhswift_playerOptions *opts,
+	                       nhswift_playerSelection *result);
 	/* Fill NetHack's player name.  Write into buf (NUL-terminated). */
 	void (*askName)(char *buf, int bufsize);
 
@@ -285,6 +327,15 @@ void nhswift_set_paths(const char *hackdir, const char *playground);
  * runs, i.e. before you start the game.  The table is copied, so the
  * caller does not need to keep it alive.  Passing NULL clears it. */
 void nhswift_set_callbacks(const nhswift_callbacks *cb);
+
+/* Query whether a role/race/gender/alignment combination is valid.
+ * Each index is 0-based into the arrays passed to the playerSelection
+ * callback, or NHSWIFT_ROLE_RANDOM (-2) to treat that slot as "any".
+ * Returns 1 if valid, 0 if not. */
+int nhswift_validrole(int roleIndex);
+int nhswift_validrace(int roleIndex, int raceIndex);
+int nhswift_validgend(int roleIndex, int raceIndex, int genderIndex);
+int nhswift_validalign(int roleIndex, int raceIndex, int alignIndex);
 
 #ifdef __cplusplus
 }
