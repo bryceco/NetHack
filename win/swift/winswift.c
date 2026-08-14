@@ -113,6 +113,7 @@ nhswift_validalign(int role, int race, int align)
 	return (int)validalign(role, race, align);
 }
 
+// Convert a glyph value (platform independent) to a tile value (platform specific)
 int
 nhswift_glyph_to_tile(int glyph)
 {
@@ -255,13 +256,17 @@ swift_player_selection(void)
 	result.alignIndex  = NHSWIFT_ROLE_RANDOM;
 
 	/* roles[] is terminated by a NULL name.m pointer. */
-	for (i = 0; roles[i].name.m && i < NHSWIFT_MAX_ROLES; i++)
-		opts.roles[i] = roles[i].name.m; // male name only
+	for (i = 0; roles[i].name.m && i < NHSWIFT_MAX_ROLES; i++) {
+		opts.roles[i] = roles[i].name.m;
+		opts.roleGlyphs[i] = monnum_to_glyph(roles[i].mnum, MALE);
+	}
 	opts.roleCount = i;
 
 	/* races[] is terminated by a NULL noun pointer. */
-	for (i = 0; races[i].noun && i < NHSWIFT_MAX_RACES; i++)
+	for (i = 0; races[i].noun && i < NHSWIFT_MAX_RACES; i++) {
 		opts.races[i] = races[i].noun;
+		opts.raceGlyphs[i] = monnum_to_glyph(races[i].mnum, MALE);
+	}
 	opts.raceCount = i;
 
 	/* ROLE_GENDERS is the count of player-selectable genders (male/female). */

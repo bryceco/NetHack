@@ -77,7 +77,9 @@ enum nhswift_pick {
  * tables, so the strings are valid for the lifetime of the callback. */
 typedef struct {
 	const char *roles[NHSWIFT_MAX_ROLES];     int roleCount;
+	int roleGlyphs[NHSWIFT_MAX_ROLES];        /* male glyph number for each role */
 	const char *races[NHSWIFT_MAX_RACES];     int raceCount;
+	int raceGlyphs[NHSWIFT_MAX_RACES];        /* male glyph number for each race */
 	const char *genders[NHSWIFT_MAX_GENDERS]; int genderCount;
 	const char *aligns[NHSWIFT_MAX_ALIGNS];   int alignCount;
 } nhswift_playerOptions;
