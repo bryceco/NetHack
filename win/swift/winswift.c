@@ -141,6 +141,25 @@ _Static_assert(offsetof(nhswift_glyph, gm.glyphflags) == offsetof(glyph_info, gm
 _Static_assert(offsetof(nhswift_glyph, gm.tileidx) == offsetof(glyph_info, gm.tileidx),
                "nhswift_glyph vs glyph_info: .gm.tileidx offset mismatch");
 
+/* Verify NHColor values match CLR_* / NO_COLOR in color.h. */
+_Static_assert(NHColorBlack         == CLR_BLACK,          "NHColorBlack mismatch");
+_Static_assert(NHColorRed           == CLR_RED,            "NHColorRed mismatch");
+_Static_assert(NHColorGreen         == CLR_GREEN,          "NHColorGreen mismatch");
+_Static_assert(NHColorBrown         == CLR_BROWN,          "NHColorBrown mismatch");
+_Static_assert(NHColorBlue          == CLR_BLUE,           "NHColorBlue mismatch");
+_Static_assert(NHColorMagenta       == CLR_MAGENTA,        "NHColorMagenta mismatch");
+_Static_assert(NHColorCyan          == CLR_CYAN,           "NHColorCyan mismatch");
+_Static_assert(NHColorGray          == CLR_GRAY,           "NHColorGray mismatch");
+_Static_assert(NHColorNone          == NO_COLOR,           "NHColorNone mismatch");
+_Static_assert(NHColorOrange        == CLR_ORANGE,         "NHColorOrange mismatch");
+_Static_assert(NHColorBrightGreen   == CLR_BRIGHT_GREEN,   "NHColorBrightGreen mismatch");
+_Static_assert(NHColorYellow        == CLR_YELLOW,         "NHColorYellow mismatch");
+_Static_assert(NHColorBrightBlue    == CLR_BRIGHT_BLUE,    "NHColorBrightBlue mismatch");
+_Static_assert(NHColorBrightMagenta == CLR_BRIGHT_MAGENTA, "NHColorBrightMagenta mismatch");
+_Static_assert(NHColorBrightCyan    == CLR_BRIGHT_CYAN,    "NHColorBrightCyan mismatch");
+_Static_assert(NHColorWhite         == CLR_WHITE,          "NHColorWhite mismatch");
+_Static_assert(NHSWIFT_CLR_MAX      == CLR_MAX,            "NHSWIFT_CLR_MAX mismatch");
+
 /* ------------------------------------------------------------------ */
 /* window_procs implementations                                        */
 /* ------------------------------------------------------------------ */

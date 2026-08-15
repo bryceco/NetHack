@@ -45,6 +45,38 @@ enum nhswift_pick {
 	NHSWIFT_PICK_ANY  = 2
 };
 
+/* Colors — mirrors CLR_* and NO_COLOR from NetHack's color.h.
+ * In Objective-C / Swift contexts this becomes an NS_ENUM.
+ * winswift.c contains _Static_assert checks that these values still match. */
+#define NHSWIFT_CLR_MAX 16
+
+#ifdef __OBJC__
+typedef NS_ENUM(NSInteger, NHColor) {
+#else
+typedef enum {
+#endif
+    NHColorBlack         =  0,   /* CLR_BLACK         */
+    NHColorRed           =  1,   /* CLR_RED           */
+    NHColorGreen         =  2,   /* CLR_GREEN         */
+    NHColorBrown         =  3,   /* CLR_BROWN (low-intensity yellow on IBM) */
+    NHColorBlue          =  4,   /* CLR_BLUE          */
+    NHColorMagenta       =  5,   /* CLR_MAGENTA       */
+    NHColorCyan          =  6,   /* CLR_CYAN          */
+    NHColorGray          =  7,   /* CLR_GRAY (low-intensity white) */
+    NHColorNone          =  8,   /* NO_COLOR          */
+    NHColorOrange        =  9,   /* CLR_ORANGE        */
+    NHColorBrightGreen   = 10,   /* CLR_BRIGHT_GREEN  */
+    NHColorYellow        = 11,   /* CLR_YELLOW        */
+    NHColorBrightBlue    = 12,   /* CLR_BRIGHT_BLUE   */
+    NHColorBrightMagenta = 13,   /* CLR_BRIGHT_MAGENTA */
+    NHColorBrightCyan    = 14,   /* CLR_BRIGHT_CYAN   */
+    NHColorWhite         = 15,   /* CLR_WHITE         */
+#ifdef __OBJC__
+};                               /* NS_ENUM already declared the typedef */
+#else
+} NHColor;
+#endif
+
 /* Returned by select_menu when the user cancelled (ESC). */
 #define NHSWIFT_MENU_CANCELLED (-1)
 
