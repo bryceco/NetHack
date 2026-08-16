@@ -222,21 +222,61 @@ typedef struct {
 
 /* ------------------------------------------------------------------ */
 /* Status fields.                                                      */
+/*                                                                     */
+/* statusUpdate() is called once per changed field, then once with     */
+/* NHStatusFieldFlush meaning "you now have a consistent snapshot".    */
+/* Update your model incrementally and redisplay on Flush.             */
+/*                                                                     */
+/* For most fields `text` holds the preformatted value and `condbits`  */
+/* is 0.  For NHStatusFieldCondition `condbits` is the active-         */
+/* condition bitmask and `text` is NULL.                               */
+/*                                                                     */
+/* winswift.c contains _Static_assert checks that these values match   */
+/* the BL_* constants in NetHack's botl.h.                             */
 /* ------------------------------------------------------------------ */
 
-/* status_update() is called once per changed field, then once with
- * fldidx == NHSWIFT_BL_FLUSH meaning "you now have a consistent set".
- * Update your model incrementally and publish on FLUSH.
- *
- * For most fields, `text` holds the preformatted value and `value` is 0.
- * For NHSWIFT_BL_CONDITION, `condbits` holds the bitmask of active
- * conditions and `text` is NULL.
- */
-#define NHSWIFT_BL_FLUSH           (-1)
-#define NHSWIFT_BL_RESET           (-2)
-#define NHSWIFT_BL_CHARACTERISTICS (-3)
-#define NHSWIFT_BL_CONDITION 22
-#define NHSWIFT_MAXBLSTATS   27
+#define NHSWIFT_MAXBLSTATS 27   /* mirrors MAXBLSTATS; use for array sizing */
+
+#ifdef __OBJC__
+typedef NS_ENUM(NSInteger, NHStatusField) {
+#else
+typedef enum {
+#endif
+    NHStatusFieldCharacteristics = -3,  /* BL_CHARACTERISTICS: alias for Str..Ch group  */
+    NHStatusFieldReset           = -2,  /* BL_RESET:           force full redisplay      */
+    NHStatusFieldFlush           = -1,  /* BL_FLUSH:           end of one update cycle   */
+    NHStatusFieldTitle           =  0,  /* BL_TITLE:    character name / title           */
+    NHStatusFieldStr             =  1,  /* BL_STR:      strength                         */
+    NHStatusFieldDex             =  2,  /* BL_DX:       dexterity                        */
+    NHStatusFieldCon             =  3,  /* BL_CO:       constitution                     */
+    NHStatusFieldInt             =  4,  /* BL_IN:       intelligence                     */
+    NHStatusFieldWis             =  5,  /* BL_WI:       wisdom                           */
+    NHStatusFieldCha             =  6,  /* BL_CH:       charisma                         */
+    NHStatusFieldAlign           =  7,  /* BL_ALIGN:    alignment                        */
+    NHStatusFieldScore           =  8,  /* BL_SCORE:    score                            */
+    NHStatusFieldCap             =  9,  /* BL_CAP:      carrying capacity                */
+    NHStatusFieldGold            = 10,  /* BL_GOLD:     gold                             */
+    NHStatusFieldEnergy          = 11,  /* BL_ENE:      power (current)                  */
+    NHStatusFieldEnergyMax       = 12,  /* BL_ENEMAX:   power (maximum)                  */
+    NHStatusFieldXp              = 13,  /* BL_XP:       experience level                 */
+    NHStatusFieldAc              = 14,  /* BL_AC:       armor class                      */
+    NHStatusFieldHd              = 15,  /* BL_HD:       hit dice (monsters only)         */
+    NHStatusFieldTime            = 16,  /* BL_TIME:     turn count                       */
+    NHStatusFieldHunger          = 17,  /* BL_HUNGER:   hunger state                     */
+    NHStatusFieldHp              = 18,  /* BL_HP:       hit points (current)             */
+    NHStatusFieldHpMax           = 19,  /* BL_HPMAX:    hit points (maximum)             */
+    NHStatusFieldLevelDesc       = 20,  /* BL_LEVELDESC: dungeon level description       */
+    NHStatusFieldExp             = 21,  /* BL_EXP:      experience points                */
+    NHStatusFieldCondition       = 22,  /* BL_CONDITION: condition bitmask (see condbits)*/
+    NHStatusFieldWeapon          = 23,  /* BL_WEAPON:   wielded weapon                   */
+    NHStatusFieldArmor           = 24,  /* BL_ARMOR:    worn armor                       */
+    NHStatusFieldTerrain         = 25,  /* BL_TERRAIN:  current terrain                  */
+    NHStatusFieldVersion         = 26,  /* BL_VERS:     version string                   */
+#ifdef __OBJC__
+};
+#else
+} NHStatusField;
+#endif
 
 /* ------------------------------------------------------------------ */
 /* The callback table.                                                 */
@@ -339,10 +379,10 @@ typedef struct nhswift_callbacks {
 
 	/* --- status --- */
 	void (*statusInit)(void);
-	void (*statusEnableField)(int fieldidx, const char *nm,
+	void (*statusEnableField)(NHStatusField fieldidx, const char *nm,
 							   const char *fmt, int enable);
-	void (*statusUpdate)(int fldidx, const char *text, long condbits,
-						  int chg, int percent, int color,
+	void (*statusUpdate)(NHStatusField fldidx, const char *text, long condbits,
+						  int chg, int percent, NHColor color,
 						  const unsigned long *colormasks);
 
 	/* --- colors (only used when NetHack is built with CHANGE_COLOR) --- */

@@ -34,10 +34,6 @@ NHSWIFT_CT_ASSERT(win_text,    NHSWIFT_WIN_TEXT    == NHW_TEXT);
 NHSWIFT_CT_ASSERT(pick_none,   NHSWIFT_PICK_NONE   == PICK_NONE);
 NHSWIFT_CT_ASSERT(pick_one,    NHSWIFT_PICK_ONE    == PICK_ONE);
 NHSWIFT_CT_ASSERT(pick_any,    NHSWIFT_PICK_ANY    == PICK_ANY);
-NHSWIFT_CT_ASSERT(bl_flush,    NHSWIFT_BL_FLUSH    == BL_FLUSH);
-NHSWIFT_CT_ASSERT(bl_chars,    NHSWIFT_BL_CHARACTERISTICS == BL_CHARACTERISTICS);
-NHSWIFT_CT_ASSERT(bl_reset,    NHSWIFT_BL_RESET    == BL_RESET);
-NHSWIFT_CT_ASSERT(bl_cond,     NHSWIFT_BL_CONDITION == BL_CONDITION);
 NHSWIFT_CT_ASSERT(maxbl,       NHSWIFT_MAXBLSTATS   == MAXBLSTATS);
 NHSWIFT_CT_ASSERT(bufsz,       NHSWIFT_BUFSZ       <= BUFSZ);
 
@@ -159,6 +155,39 @@ _Static_assert(NHColorBrightMagenta == CLR_BRIGHT_MAGENTA, "NHColorBrightMagenta
 _Static_assert(NHColorBrightCyan    == CLR_BRIGHT_CYAN,    "NHColorBrightCyan mismatch");
 _Static_assert(NHColorWhite         == CLR_WHITE,          "NHColorWhite mismatch");
 _Static_assert(NHSWIFT_CLR_MAX      == CLR_MAX,            "NHSWIFT_CLR_MAX mismatch");
+
+/* Verify NHStatusField values match BL_* / MAXBLSTATS in botl.h. */
+_Static_assert(NHStatusFieldCharacteristics == BL_CHARACTERISTICS, "NHStatusFieldCharacteristics mismatch");
+_Static_assert(NHStatusFieldReset           == BL_RESET,           "NHStatusFieldReset mismatch");
+_Static_assert(NHStatusFieldFlush           == BL_FLUSH,           "NHStatusFieldFlush mismatch");
+_Static_assert(NHStatusFieldTitle           == BL_TITLE,           "NHStatusFieldTitle mismatch");
+_Static_assert(NHStatusFieldStr             == BL_STR,             "NHStatusFieldStr mismatch");
+_Static_assert(NHStatusFieldDex             == BL_DX,              "NHStatusFieldDex mismatch");
+_Static_assert(NHStatusFieldCon             == BL_CO,              "NHStatusFieldCon mismatch");
+_Static_assert(NHStatusFieldInt             == BL_IN,              "NHStatusFieldInt mismatch");
+_Static_assert(NHStatusFieldWis             == BL_WI,              "NHStatusFieldWis mismatch");
+_Static_assert(NHStatusFieldCha             == BL_CH,              "NHStatusFieldCha mismatch");
+_Static_assert(NHStatusFieldAlign           == BL_ALIGN,           "NHStatusFieldAlign mismatch");
+_Static_assert(NHStatusFieldScore           == BL_SCORE,           "NHStatusFieldScore mismatch");
+_Static_assert(NHStatusFieldCap             == BL_CAP,             "NHStatusFieldCap mismatch");
+_Static_assert(NHStatusFieldGold            == BL_GOLD,            "NHStatusFieldGold mismatch");
+_Static_assert(NHStatusFieldEnergy          == BL_ENE,             "NHStatusFieldEnergy mismatch");
+_Static_assert(NHStatusFieldEnergyMax       == BL_ENEMAX,          "NHStatusFieldEnergyMax mismatch");
+_Static_assert(NHStatusFieldXp              == BL_XP,              "NHStatusFieldXp mismatch");
+_Static_assert(NHStatusFieldAc              == BL_AC,              "NHStatusFieldAc mismatch");
+_Static_assert(NHStatusFieldHd              == BL_HD,              "NHStatusFieldHd mismatch");
+_Static_assert(NHStatusFieldTime            == BL_TIME,            "NHStatusFieldTime mismatch");
+_Static_assert(NHStatusFieldHunger          == BL_HUNGER,          "NHStatusFieldHunger mismatch");
+_Static_assert(NHStatusFieldHp              == BL_HP,              "NHStatusFieldHp mismatch");
+_Static_assert(NHStatusFieldHpMax           == BL_HPMAX,           "NHStatusFieldHpMax mismatch");
+_Static_assert(NHStatusFieldLevelDesc       == BL_LEVELDESC,       "NHStatusFieldLevelDesc mismatch");
+_Static_assert(NHStatusFieldExp             == BL_EXP,             "NHStatusFieldExp mismatch");
+_Static_assert(NHStatusFieldCondition       == BL_CONDITION,       "NHStatusFieldCondition mismatch");
+_Static_assert(NHStatusFieldWeapon          == BL_WEAPON,          "NHStatusFieldWeapon mismatch");
+_Static_assert(NHStatusFieldArmor           == BL_ARMOR,           "NHStatusFieldArmor mismatch");
+_Static_assert(NHStatusFieldTerrain         == BL_TERRAIN,         "NHStatusFieldTerrain mismatch");
+_Static_assert(NHStatusFieldVersion         == BL_VERS,            "NHStatusFieldVersion mismatch");
+_Static_assert(NHSWIFT_MAXBLSTATS           == MAXBLSTATS,         "NHSWIFT_MAXBLSTATS mismatch");
 
 /* ------------------------------------------------------------------ */
 /* window_procs implementations                                        */
