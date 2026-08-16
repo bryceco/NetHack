@@ -462,6 +462,36 @@ swift_start_menu(winid window, unsigned long mbehavior)
 		(*cb.startMenu)((int) window, mbehavior);
 }
 
+/* Add one item to the menu being built in 'window'.
+ *
+ * glyphinfo  — optional tile/glyph to display beside the text.  If the item
+ *              has no image, glyphinfo->glyph is NO_GLYPH.
+ *
+ * identifier — opaque value returned by select_menu() when this item is
+ *              chosen.  Pass NULL or an anything set to zero to make a
+ *              non-selectable header/separator line.
+ *
+ * ch         — preferred keyboard accelerator in [A-Za-z], or 0 to let the
+ *              window port assign one.
+ *
+ * gch        — group accelerator: selects/deselects every item that shares
+ *              this character (e.g. the object-class symbol '$' for all
+ *              coins).  0 means the item is not part of any group.
+ *
+ * attr       — text attribute: ATR_NONE, ATR_BOLD, ATR_DIM, ATR_ITALIC,
+ *              ATR_ULINE, ATR_BLINK, or ATR_INVERSE.
+ *
+ * clr        — foreground color: one of the CLR_* constants, or NO_COLOR.
+ *
+ * str        — item label text (never NULL from the core, but this function
+ *              substitutes "" as a safety measure).
+ *
+ * itemflags  — bitmask of MENU_ITEMFLAGS_* values:
+ *                MENU_ITEMFLAGS_NONE          — normal item
+ *                MENU_ITEMFLAGS_SELECTED      — pre-checked in PICK_ANY menus
+ *                MENU_ITEMFLAGS_SKIPINVERT    — not toggled by "select all"
+ *                MENU_ITEMFLAGS_SKIPMENUCOLORS — ignore menu-color rules
+ */
 staticfn void
 swift_add_menu(winid window, const glyph_info *glyphinfo,
                const anything *identifier, char ch, char gch, int attr,
@@ -493,6 +523,27 @@ swift_end_menu(winid window, const char *prompt)
 		(*cb.endMenu)((int) window, prompt);
 }
 
+/* Present the menu identified by 'window' and wait for user input.
+ *
+ * how:
+ *   PICK_NONE — display only; user acknowledges, no selection possible.
+ *   PICK_ONE  — user taps a hotkey or clicks an item; returns immediately
+ *               without an explicit Accept step.  ESC/Close returns -1.
+ *   PICK_ANY  — checkboxes; user toggles items then presses Accept/Cancel.
+ *
+ * Return value (per doc/window.txt):
+ *   > 0  — number of items selected; *menu_list points to a malloc'd
+ *           menu_item array owned by the core (core calls free()).
+ *   0    — no items selected (PICK_NONE acknowledged, or Accept with
+ *           nothing checked).
+ *   -1   — explicitly cancelled (ESC or Cancel).
+ *
+ * The bridge returns NHSWIFT_MENU_CANCELLED (-1) when the Swift UI calls
+ * completion(nil), which maps cleanly to the -1 case below.
+ * nhswift_menu_item is binary-compatible with menu_item (verified by
+ * compile-time asserts near the top of this file), so the bridge-allocated
+ * array can be handed directly to the core without copying.
+ */
 staticfn int
 swift_select_menu(winid window, int how, MENU_ITEM_P **menu_list)
 {
