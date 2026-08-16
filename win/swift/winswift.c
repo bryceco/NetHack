@@ -156,37 +156,41 @@ _Static_assert(NHColorBrightCyan    == CLR_BRIGHT_CYAN,    "NHColorBrightCyan mi
 _Static_assert(NHColorWhite         == CLR_WHITE,          "NHColorWhite mismatch");
 _Static_assert(NHSWIFT_CLR_MAX      == CLR_MAX,            "NHSWIFT_CLR_MAX mismatch");
 
-/* Verify NHStatusField values match BL_* / MAXBLSTATS in botl.h. */
-_Static_assert(NHStatusFieldCharacteristics == BL_CHARACTERISTICS, "NHStatusFieldCharacteristics mismatch");
-_Static_assert(NHStatusFieldReset           == BL_RESET,           "NHStatusFieldReset mismatch");
-_Static_assert(NHStatusFieldFlush           == BL_FLUSH,           "NHStatusFieldFlush mismatch");
-_Static_assert(NHStatusFieldTitle           == BL_TITLE,           "NHStatusFieldTitle mismatch");
-_Static_assert(NHStatusFieldStr             == BL_STR,             "NHStatusFieldStr mismatch");
-_Static_assert(NHStatusFieldDex             == BL_DX,              "NHStatusFieldDex mismatch");
-_Static_assert(NHStatusFieldCon             == BL_CO,              "NHStatusFieldCon mismatch");
-_Static_assert(NHStatusFieldInt             == BL_IN,              "NHStatusFieldInt mismatch");
-_Static_assert(NHStatusFieldWis             == BL_WI,              "NHStatusFieldWis mismatch");
-_Static_assert(NHStatusFieldCha             == BL_CH,              "NHStatusFieldCha mismatch");
-_Static_assert(NHStatusFieldAlign           == BL_ALIGN,           "NHStatusFieldAlign mismatch");
-_Static_assert(NHStatusFieldScore           == BL_SCORE,           "NHStatusFieldScore mismatch");
-_Static_assert(NHStatusFieldCap             == BL_CAP,             "NHStatusFieldCap mismatch");
-_Static_assert(NHStatusFieldGold            == BL_GOLD,            "NHStatusFieldGold mismatch");
-_Static_assert(NHStatusFieldEnergy          == BL_ENE,             "NHStatusFieldEnergy mismatch");
-_Static_assert(NHStatusFieldEnergyMax       == BL_ENEMAX,          "NHStatusFieldEnergyMax mismatch");
-_Static_assert(NHStatusFieldXp              == BL_XP,              "NHStatusFieldXp mismatch");
-_Static_assert(NHStatusFieldAc              == BL_AC,              "NHStatusFieldAc mismatch");
-_Static_assert(NHStatusFieldHd              == BL_HD,              "NHStatusFieldHd mismatch");
-_Static_assert(NHStatusFieldTime            == BL_TIME,            "NHStatusFieldTime mismatch");
-_Static_assert(NHStatusFieldHunger          == BL_HUNGER,          "NHStatusFieldHunger mismatch");
-_Static_assert(NHStatusFieldHp              == BL_HP,              "NHStatusFieldHp mismatch");
-_Static_assert(NHStatusFieldHpMax           == BL_HPMAX,           "NHStatusFieldHpMax mismatch");
-_Static_assert(NHStatusFieldLevelDesc       == BL_LEVELDESC,       "NHStatusFieldLevelDesc mismatch");
-_Static_assert(NHStatusFieldExp             == BL_EXP,             "NHStatusFieldExp mismatch");
-_Static_assert(NHStatusFieldCondition       == BL_CONDITION,       "NHStatusFieldCondition mismatch");
-_Static_assert(NHStatusFieldWeapon          == BL_WEAPON,          "NHStatusFieldWeapon mismatch");
-_Static_assert(NHStatusFieldArmor           == BL_ARMOR,           "NHStatusFieldArmor mismatch");
-_Static_assert(NHStatusFieldTerrain         == BL_TERRAIN,         "NHStatusFieldTerrain mismatch");
-_Static_assert(NHStatusFieldVersion         == BL_VERS,            "NHStatusFieldVersion mismatch");
+/* Verify NHStatusField values match BL_* / MAXBLSTATS in botl.h.
+   Cast both sides to int to avoid -Wenum-compare between NHStatusField
+   (an ObjC NS_ENUM) and enum statusfields (a plain C enum). */
+#define _BLCHECK(a, b) _Static_assert((int)(a) == (int)(b), #a " mismatch")
+_BLCHECK(NHStatusFieldCharacteristics, BL_CHARACTERISTICS);
+_BLCHECK(NHStatusFieldReset,           BL_RESET);
+_BLCHECK(NHStatusFieldFlush,           BL_FLUSH);
+_BLCHECK(NHStatusFieldTitle,           BL_TITLE);
+_BLCHECK(NHStatusFieldStr,             BL_STR);
+_BLCHECK(NHStatusFieldDex,             BL_DX);
+_BLCHECK(NHStatusFieldCon,             BL_CO);
+_BLCHECK(NHStatusFieldInt,             BL_IN);
+_BLCHECK(NHStatusFieldWis,             BL_WI);
+_BLCHECK(NHStatusFieldCha,             BL_CH);
+_BLCHECK(NHStatusFieldAlign,           BL_ALIGN);
+_BLCHECK(NHStatusFieldScore,           BL_SCORE);
+_BLCHECK(NHStatusFieldCap,             BL_CAP);
+_BLCHECK(NHStatusFieldGold,            BL_GOLD);
+_BLCHECK(NHStatusFieldEnergy,          BL_ENE);
+_BLCHECK(NHStatusFieldEnergyMax,       BL_ENEMAX);
+_BLCHECK(NHStatusFieldXp,              BL_XP);
+_BLCHECK(NHStatusFieldAc,              BL_AC);
+_BLCHECK(NHStatusFieldHd,              BL_HD);
+_BLCHECK(NHStatusFieldTime,            BL_TIME);
+_BLCHECK(NHStatusFieldHunger,          BL_HUNGER);
+_BLCHECK(NHStatusFieldHp,              BL_HP);
+_BLCHECK(NHStatusFieldHpMax,           BL_HPMAX);
+_BLCHECK(NHStatusFieldLevelDesc,       BL_LEVELDESC);
+_BLCHECK(NHStatusFieldExp,             BL_EXP);
+_BLCHECK(NHStatusFieldCondition,       BL_CONDITION);
+_BLCHECK(NHStatusFieldWeapon,          BL_WEAPON);
+_BLCHECK(NHStatusFieldArmor,           BL_ARMOR);
+_BLCHECK(NHStatusFieldTerrain,         BL_TERRAIN);
+_BLCHECK(NHStatusFieldVersion,         BL_VERS);
+#undef _BLCHECK
 _Static_assert(NHSWIFT_MAXBLSTATS           == MAXBLSTATS,         "NHSWIFT_MAXBLSTATS mismatch");
 
 /* ------------------------------------------------------------------ */
@@ -778,6 +782,52 @@ swift_status_update(int fldidx, genericptr_t ptr, int chg, int percent,
 		condbits = ptr ? *(long *) ptr : 0L;
 	else if (fldidx >= 0)
 		text = (const char *) ptr;
+
+	/* For BL_LEVELDESC, replace tty-style "Dlvl:N" with a human-readable
+	   string like "Dungeons of Doom: level 5", or "Gehennom 3: level 15"
+	   when the branch level (dunlev) differs from the absolute depth.
+	   Special locations (Knox, endgame, quest) are shown as
+	   "<dname>: <description>". */
+	char dlvltext[BUFSZ];
+	if (fldidx == BL_LEVELDESC && text) {
+		const char *dname = svd.dungeons[u.uz.dnum].dname;
+		/* describe_level appends a trailing space; strip it */
+		char trimmed[BUFSZ];
+		Strcpy(trimmed, text);
+		int tlen = (int) strlen(trimmed);
+		while (tlen > 0 && trimmed[tlen - 1] == ' ')
+			trimmed[--tlen] = '\0';
+		if (strncmp(trimmed, "Dlvl:", 5) == 0
+		    || strncmp(trimmed, "Tutorial:", 9) == 0) {
+			const char *colon = strchr(trimmed, ':');
+			int displayed = colon ? atoi(colon + 1) : 0;
+			int lvl = dunlev(&u.uz);
+			if (lvl == displayed)
+				Snprintf(dlvltext, sizeof dlvltext,
+						 "%s: level %d", dname, lvl);
+			else
+				Snprintf(dlvltext, sizeof dlvltext,
+						 "%s %d: level %d", dname, lvl, displayed);
+		} else {
+			Snprintf(dlvltext, sizeof dlvltext, "%s: %s", dname, trimmed);
+		}
+		text = dlvltext;
+	}
+
+	/* For BL_ALIGN, augment the alignment text with race adjective and
+	   role (or polymorph form) so Swift can display a combined role string
+	   like "Neutral human Wizard" or "Neutral (human) kobold". */
+	char roletext[BUFSZ];
+	if (fldidx == BL_ALIGN && text) {
+		boolean polyd = (u.umonnum != u.umonster);
+		if (polyd)
+			Snprintf(roletext, sizeof roletext, "%s (%s) %s",
+					 text, gu.urace.adj, pmname(&mons[u.umonnum], Ugender));
+		else
+			Snprintf(roletext, sizeof roletext, "%s %s %s",
+					 text, gu.urace.adj, pmname(&mons[u.umonnum], Ugender));
+		text = roletext;
+	}
 
 	(*cb.statusUpdate)(fldidx, text, condbits, chg, percent, color,
 						colormasks);
