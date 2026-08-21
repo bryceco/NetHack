@@ -399,7 +399,12 @@ typedef struct nhswift_callbacks {
 	void (*statusInit)(void);
 	void (*statusEnableField)(NHStatusField fieldidx, const char *nm,
 							   const char *fmt, int enable);
-	void (*statusUpdate)(NHStatusField fldidx, const char *text, long condbits,
+	/* fldidx is plain int (not NHStatusField) so that the C caller and the
+	 * ObjC callee agree on parameter width.  NHStatusField is int-sized in
+	 * C but NSInteger-sized (long) in ObjC; passing it as NHStatusField
+	 * through the function pointer causes ARM64 to zero-extend the value
+	 * and deliver 4294967294 instead of -2 for BL_RESET. */
+	void (*statusUpdate)(int fldidx, const char *text, long condbits,
 						  int chg, int percent, NHColor color,
 						  const unsigned long *colormasks);
 
