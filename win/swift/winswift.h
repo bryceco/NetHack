@@ -3,10 +3,7 @@
  * front end.
  *
  * This header deliberately includes NO NetHack headers.  Everything here is
- * plain C using standard types, so it can be imported by a Swift package
- * (via a module map or an umbrella header) without dragging in hack.h,
- * config.h, or NetHack's boolean/TRUE/FALSE macros, which collide with
- * Foundation.
+ * plain C using standard types, so it can be imported by Swift package.
  *
  * All NetHack-specific types are translated on the C side in winswift.c:
  *   winid    -> int
@@ -39,11 +36,19 @@ enum nhswift_wintype {
 	NHSWIFT_WIN_TEXT    = 5
 };
 
-enum nhswift_pick {
+#ifdef __OBJC__
+typedef NS_ENUM(NSInteger, NHPickMode) {
+    NHPickModeNone = 0,  /* PICK_NONE — display only      */
+    NHPickModeOne  = 1,  /* PICK_ONE  — single selection  */
+    NHPickModeAny  = 2,  /* PICK_ANY  — multi-selection   */
+};
+#else
+typedef enum {
 	NHSWIFT_PICK_NONE = 0,
 	NHSWIFT_PICK_ONE  = 1,
 	NHSWIFT_PICK_ANY  = 2
-};
+} NHPickMode;
+#endif
 
 /* Colors — mirrors CLR_* and NO_COLOR from NetHack's color.h.
  * In Objective-C / Swift contexts this becomes an NS_ENUM.
