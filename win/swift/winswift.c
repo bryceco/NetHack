@@ -14,6 +14,7 @@
  */
 
 #include "hack.h"
+#include "func_tab.h"
 #include "winswift.h"
 #include <string.h>
 
@@ -118,6 +119,7 @@ nhswift_glyph_to_tile(int glyph)
 		return -1;
 	return (int)glyphmap[glyph].tileidx;
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Layout verification                                                 */
@@ -632,9 +634,32 @@ swift_getlin(const char *query, char *bufp)
 staticfn int
 swift_get_ext_cmd(void)
 {
+	nhswift_extcmd cmds[512];
+	const struct ext_func_tab *efp;
+	int i, n, result;
+
 	if (!cb.getExtCmd)
 		return -1;
-	return (*cb.getExtCmd)();
+
+	/* Build the filtered list, recording each entry's original index. */
+	n = 0;
+	for (efp = extcmdlist, i = 0; efp->ef_txt; efp++, i++) {
+		if (efp->flags & (CMD_NOT_AVAILABLE | INTERNALCMD))
+			continue;
+		if (n >= (int)(sizeof cmds / sizeof cmds[0]))
+			break;
+		cmds[n].index = i;
+		cmds[n].key   = (int)(unsigned char)efp->key;
+		cmds[n].name  = efp->ef_txt;
+		cmds[n].desc  = efp->ef_desc;
+		n++;
+	}
+
+	/* The callback returns an index into cmds[]; translate back to extcmdlist[]. */
+	result = (*cb.getExtCmd)(cmds, n);
+	if (result < 0 || result >= n)
+		return -1;
+	return cmds[result].index;
 }
 
 staticfn int

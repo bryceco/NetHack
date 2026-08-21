@@ -206,6 +206,21 @@ typedef struct {
 } nhswift_inven_slot;
 
 /* ------------------------------------------------------------------ */
+/* Extended command descriptor.                                        */
+/*                                                                     */
+/* swift_get_ext_cmd() builds a filtered array of these on the stack  */
+/* and passes it to (*cb.getExtCmd)().  Strings are owned by NetHack  */
+/* and are valid for the lifetime of the process.                      */
+/* ------------------------------------------------------------------ */
+
+typedef struct {
+	int        index; /* original index in extcmdlist[] — return this value */
+	int        key;   /* primary key binding (0 if none; >127 = meta key)   */
+	const char *name; /* ef_txt  — command name,   e.g. "pray"              */
+	const char *desc; /* ef_desc — description,    e.g. "pray to the gods"  */
+} nhswift_extcmd;
+
+/* ------------------------------------------------------------------ */
 /* Menu selection result.                                              */
 /*                                                                     */
 /* Mirrors the layout of NetHack's menu_item (anything item + long     */
@@ -353,7 +368,10 @@ typedef struct nhswift_callbacks {
 	int  (*posKey)(int *x, int *y, int *mod);
 	int  (*ynFunction)(const char *query, const char *resp, int def);
 	void (*getLine)(const char *query, char *buf, int bufsize);
-	int  (*getExtCmd)(void);
+	/* cmds is a filtered snapshot of extcmdlist[]; count is its length.
+	 * Return the index into cmds of the chosen command, or -1 to cancel.
+	 * swift_get_ext_cmd() translates that back to the extcmdlist[] index. */
+	int  (*getExtCmd)(const nhswift_extcmd *cmds, int count);
 	int  (*prevMessage)(void);
 	void (*numberPad)(int state);
 
