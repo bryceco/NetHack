@@ -293,6 +293,49 @@ typedef enum {
 } NHStatusField;
 #endif
 
+/* NHCondition — bitmask of active player conditions (BL_CONDITION).  */
+/* Verified against BL_MASK_* in winswift.c.                          */
+#ifdef __OBJC__
+typedef NS_OPTIONS(NSUInteger, NHCondition) {
+#else
+typedef enum {
+#endif
+    NHConditionBareHanded    = 0x00000001UL,  /* BL_MASK_BAREH     */
+    NHConditionBlind         = 0x00000002UL,  /* BL_MASK_BLIND     */
+    NHConditionBusy          = 0x00000004UL,  /* BL_MASK_BUSY      */
+    NHConditionConfused      = 0x00000008UL,  /* BL_MASK_CONF      */
+    NHConditionDeaf          = 0x00000010UL,  /* BL_MASK_DEAF      */
+    NHConditionElfIron       = 0x00000020UL,  /* BL_MASK_ELF_IRON  */
+    NHConditionFlying        = 0x00000040UL,  /* BL_MASK_FLY       */
+    NHConditionFoodPoisoned  = 0x00000080UL,  /* BL_MASK_FOODPOIS  */
+    NHConditionGlowingHands  = 0x00000100UL,  /* BL_MASK_GLOWHANDS */
+    NHConditionGrabbed       = 0x00000200UL,  /* BL_MASK_GRAB      */
+    NHConditionHallucinating = 0x00000400UL,  /* BL_MASK_HALLU     */
+    NHConditionHeld          = 0x00000800UL,  /* BL_MASK_HELD      */
+    NHConditionIcy           = 0x00001000UL,  /* BL_MASK_ICY       */
+    NHConditionInLava        = 0x00002000UL,  /* BL_MASK_INLAVA    */
+    NHConditionLevitating    = 0x00004000UL,  /* BL_MASK_LEV       */
+    NHConditionParalyzed     = 0x00008000UL,  /* BL_MASK_PARLYZ    */
+    NHConditionRiding        = 0x00010000UL,  /* BL_MASK_RIDE      */
+    NHConditionSleeping      = 0x00020000UL,  /* BL_MASK_SLEEPING  */
+    NHConditionSlimed        = 0x00040000UL,  /* BL_MASK_SLIME     */
+    NHConditionSlippery      = 0x00080000UL,  /* BL_MASK_SLIPPERY  */
+    NHConditionStoning       = 0x00100000UL,  /* BL_MASK_STONE     */
+    NHConditionStrangling    = 0x00200000UL,  /* BL_MASK_STRNGL    */
+    NHConditionStunned       = 0x00400000UL,  /* BL_MASK_STUN      */
+    NHConditionSubmerged     = 0x00800000UL,  /* BL_MASK_SUBMERGED */
+    NHConditionTerminalIll   = 0x01000000UL,  /* BL_MASK_TERMILL   */
+    NHConditionTethered      = 0x02000000UL,  /* BL_MASK_TETHERED  */
+    NHConditionTrapped       = 0x04000000UL,  /* BL_MASK_TRAPPED   */
+    NHConditionUnconscious   = 0x08000000UL,  /* BL_MASK_UNCONSC   */
+    NHConditionWoundedLegs   = 0x10000000UL,  /* BL_MASK_WOUNDEDL  */
+    NHConditionHolding       = 0x20000000UL,  /* BL_MASK_HOLDING   */
+#ifdef __OBJC__
+};
+#else
+} NHCondition;
+#endif
+
 /* ------------------------------------------------------------------ */
 /* The callback table.                                                 */
 /* ------------------------------------------------------------------ */

@@ -195,6 +195,40 @@ _BLCHECK(NHStatusFieldVersion,         BL_VERS);
 #undef _BLCHECK
 _Static_assert(NHSWIFT_MAXBLSTATS           == MAXBLSTATS,         "NHSWIFT_MAXBLSTATS mismatch");
 
+/* Verify NHCondition values match BL_MASK_* in botl.h. */
+#define _BLMASK(a, b) _Static_assert((unsigned long)(a) == (unsigned long)(b), #a " mismatch")
+_BLMASK(NHConditionBareHanded,    BL_MASK_BAREH);
+_BLMASK(NHConditionBlind,         BL_MASK_BLIND);
+_BLMASK(NHConditionBusy,          BL_MASK_BUSY);
+_BLMASK(NHConditionConfused,      BL_MASK_CONF);
+_BLMASK(NHConditionDeaf,          BL_MASK_DEAF);
+_BLMASK(NHConditionElfIron,       BL_MASK_ELF_IRON);
+_BLMASK(NHConditionFlying,        BL_MASK_FLY);
+_BLMASK(NHConditionFoodPoisoned,  BL_MASK_FOODPOIS);
+_BLMASK(NHConditionGlowingHands,  BL_MASK_GLOWHANDS);
+_BLMASK(NHConditionGrabbed,       BL_MASK_GRAB);
+_BLMASK(NHConditionHallucinating, BL_MASK_HALLU);
+_BLMASK(NHConditionHeld,          BL_MASK_HELD);
+_BLMASK(NHConditionIcy,           BL_MASK_ICY);
+_BLMASK(NHConditionInLava,        BL_MASK_INLAVA);
+_BLMASK(NHConditionLevitating,    BL_MASK_LEV);
+_BLMASK(NHConditionParalyzed,     BL_MASK_PARLYZ);
+_BLMASK(NHConditionRiding,        BL_MASK_RIDE);
+_BLMASK(NHConditionSleeping,      BL_MASK_SLEEPING);
+_BLMASK(NHConditionSlimed,        BL_MASK_SLIME);
+_BLMASK(NHConditionSlippery,      BL_MASK_SLIPPERY);
+_BLMASK(NHConditionStoning,       BL_MASK_STONE);
+_BLMASK(NHConditionStrangling,    BL_MASK_STRNGL);
+_BLMASK(NHConditionStunned,       BL_MASK_STUN);
+_BLMASK(NHConditionSubmerged,     BL_MASK_SUBMERGED);
+_BLMASK(NHConditionTerminalIll,   BL_MASK_TERMILL);
+_BLMASK(NHConditionTethered,      BL_MASK_TETHERED);
+_BLMASK(NHConditionTrapped,       BL_MASK_TRAPPED);
+_BLMASK(NHConditionUnconscious,   BL_MASK_UNCONSC);
+_BLMASK(NHConditionWoundedLegs,   BL_MASK_WOUNDEDL);
+_BLMASK(NHConditionHolding,       BL_MASK_HOLDING);
+#undef _BLMASK
+
 /* ------------------------------------------------------------------ */
 /* window_procs implementations                                        */
 /* ------------------------------------------------------------------ */
